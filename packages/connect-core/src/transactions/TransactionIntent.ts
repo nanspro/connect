@@ -3,7 +3,7 @@ import { ethers } from 'ethers'
 import TransactionPath from './TransactionPath'
 import TransactionRequest from './TransactionRequest'
 import Organization from '../entities/Organization'
-import { calculateTransactionPath } from '../utils/path/calculatePath'
+import { calculateTransactionPath, calculateAllTransactionPaths, calculateCustomTransactionPath } from '../utils/path/calculatePath'
 import { describeTransactionPath } from '../utils/descriptions'
 
 export interface TransactionIntentData {
@@ -33,6 +33,85 @@ export default class TransactionIntent {
     this.functionName = data.functionName
   }
 
+  async allPaths(
+    account: string,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    options?: { as?: string; path?: string[] }
+  ): Promise<TransactionPath[]> {
+    const apps = await this.#org.apps()
+    let allTxPaths = [];
+
+    const allPaths = await calculateAllTransactionPaths(
+      account,
+      this.contractAddress,
+      this.functionName,
+      this.functionArgs,
+      apps,
+      this.#provider
+    )
+
+    console.log("Pathssss", allPaths);
+    for(let i = 0; i < allPaths.length; i++){
+        let describedPath = await describeTransactionPath(
+        allPaths[i].path,
+        apps,
+        this.#provider
+      )
+
+      let txPath = await new TransactionPath({
+        apps: apps.filter(app =>
+          allPaths[i].path
+            .map(transaction => transaction.to)
+            .some(address => address === app.address)
+        ),
+        destination: apps.find(app => app.address == this.contractAddress)!,
+        forwardingFeePretransaction: allPaths[i].forwardingFeePretransaction,
+        transactions: describedPath,
+      })
+      allTxPaths.push(txPath);
+    }
+    return allTxPaths;
+  }
+
+  async customPaths(
+    account: string,
+    start?: string[],
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    options?: { as?: string; path?: string[] }
+  ): Promise<TransactionPath> {
+    const apps = await this.#org.apps()
+
+    const {
+      forwardingFeePretransaction,
+      path,
+    } = await calculateCustomTransactionPath(
+      account,
+      this.contractAddress,
+      this.functionName,
+      this.functionArgs,
+      apps,
+      this.#provider,
+      start
+    )
+
+    const describedPath = await describeTransactionPath(
+      path,
+      apps,
+      this.#provider
+    )
+
+    return new TransactionPath({
+      apps: apps.filter(app =>
+        path
+          .map(transaction => transaction.to)
+          .some(address => address === app.address)
+      ),
+      destination: apps.find(app => app.address == this.contractAddress)!,
+      forwardingFeePretransaction,
+      transactions: describedPath,
+    })
+  }
+
   async paths(
     account: string,
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -51,6 +130,8 @@ export default class TransactionIntent {
       apps,
       this.#provider
     )
+
+    console.log('Path yay', path);
 
     const describedPath = await describeTransactionPath(
       path,
