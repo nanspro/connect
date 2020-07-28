@@ -441,6 +441,7 @@ export async function calculateCustomTransactionPath(
       finalForwarder
     )
   }
+  console.log("start");
   const initForwarders = start;
   const lastSender = initForwarders[initForwarders.length - 1];
 

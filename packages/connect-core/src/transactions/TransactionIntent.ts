@@ -3,7 +3,7 @@ import { ethers } from 'ethers'
 import TransactionPath from './TransactionPath'
 import TransactionRequest from './TransactionRequest'
 import Organization from '../entities/Organization'
-import { calculateTransactionPath, calculateAllTransactionPaths, calculateCustomTransactionPath } from '../utils/path/calculatePath'
+import { calculateTransactionPath, calculateAllTransactionPaths, calculateCustomTransactionPath, checkCustomIncludedTxPath } from '../utils/path/calculatePath'
 import { describeTransactionPath } from '../utils/descriptions'
 
 export interface TransactionIntentData {
@@ -75,16 +75,79 @@ export default class TransactionIntent {
 
   async customPaths(
     account: string,
-    start?: string[],
+    init?: string[],
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     options?: { as?: string; path?: string[] }
   ): Promise<TransactionPath> {
     const apps = await this.#org.apps()
+    let start = [];
+    if(init) {
+      for (let i = 0; i < init.length; i++){
+        if (init[i][0] == '0'){
+          start.push(init[i]);
+        }
+        else{
+          let addr = await this.#org.app(init[i]);
+          start.push(addr.address);
+        }
+      }
+    }
 
     const {
       forwardingFeePretransaction,
       path,
     } = await calculateCustomTransactionPath(
+      account,
+      this.contractAddress,
+      this.functionName,
+      this.functionArgs,
+      apps,
+      this.#provider,
+      start
+    )
+
+    const describedPath = await describeTransactionPath(
+      path,
+      apps,
+      this.#provider
+    )
+
+    return new TransactionPath({
+      apps: apps.filter(app =>
+        path
+          .map(transaction => transaction.to)
+          .some(address => address === app.address)
+      ),
+      destination: apps.find(app => app.address == this.contractAddress)!,
+      forwardingFeePretransaction,
+      transactions: describedPath,
+    })
+  }
+
+  async checkPath(
+    account: string,
+    init?: string[],
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    options?: { as?: string; path?: string[] }
+  ): Promise<TransactionPath> {
+    const apps = await this.#org.apps()
+    let start = [];
+    if(init) {
+      for (let i = 0; i < init.length; i++){
+        if (init[i][0] == '0'){
+          start.push(init[i]);
+        }
+        else{
+          let addr = await this.#org.app(init[i]);
+          start.push(addr.address);
+        }
+      }
+    }
+
+    const {
+      forwardingFeePretransaction,
+      path,
+    } = await checkCustomIncludedTxPath(
       account,
       this.contractAddress,
       this.functionName,

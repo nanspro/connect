@@ -23,18 +23,28 @@ async function main() {
   txPath.transactions.map((tx: any) => console.log(tx))
 
   // Custom Tx Path
-  // const start = ["0x846829d989c15a2ef36e01aad0e9ae6a1f71305c"]
-  // const customPath = await intent.customPaths(ACCOUNT);
-  // console.log("Custom TX Path yo", customPath);
-  // customPath.transactions.map((tx: any) => console.log(tx))
+  const start = ["0x846829d989c15a2ef36e01aad0e9ae6a1f71305c", "0x9a21e988d43e78473933723f4fc30d6fb7874b2e"];
+  const customPath = await intent.customPaths(ACCOUNT, start);
+  console.log("Custom TX Path yo", customPath);
+  customPath.transactions.map((tx: any) => console.log(tx))
+
+  const start1 = ["token-manager", "voting"];
+  const customPath1 = await intent.customPaths(ACCOUNT, start1);
+  console.log("Custom TX Path yo", customPath1);
+  customPath1.transactions.map((tx: any) => console.log(tx))
+
+  const path = ["token-manager", "voting", "finance"];
+  const customPath2 = await intent.checkPath(ACCOUNT, path);
+  console.log("Custom TX Path yo", customPath2);
+  customPath2.transactions.map((tx: any) => console.log(tx))
 
 
-  // const txPaths = await intent.allPaths(ACCOUNT)
-  // console.log("TX All Paths man", txPaths);
+  const txPaths = await intent.allPaths(ACCOUNT)
+  console.log("TX All Paths man", txPaths);
   // Transaction request
-  // for (let i = 0; i < txPaths.length; i++){
-    // txPaths[i].transactions.map((tx: any) => console.log(tx))
-  // }
+  for (let i = 0; i < txPaths.length; i++){
+    txPaths[i].transactions.map((tx: any) => console.log(tx))
+  }
 }
 
 main()
